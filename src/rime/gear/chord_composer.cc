@@ -84,6 +84,10 @@ inline static int get_base_layer_key_code(const KeyEvent& key_event) {
       ? map_to_base_layer[ch - 0x20] : ch;
 }
 
+inline static bool is_composing_text(Context* ctx) {
+  return ctx->IsComposing() && ctx->input() != kZeroWidthSpace;
+}
+
 ProcessResult ChordComposer::ProcessChordingKey(const KeyEvent& key_event) {
   if (key_event.ctrl() || key_event.alt()) {
     raw_sequence_.clear();
@@ -107,6 +111,9 @@ ProcessResult ChordComposer::ProcessChordingKey(const KeyEvent& key_event) {
   if (is_key_up) {
     if (pressed_.erase(ch) != 0 && pressed_.empty()) {
       FinishChord();
+      // 10fastfingers simplified Chinese test detects space up at word ending
+      if (ch == ' ' && !is_composing_text(engine_->context()))
+        return kRejected;
     }
   }
   else {  // key down
@@ -116,10 +123,6 @@ ProcessResult ChordComposer::ProcessChordingKey(const KeyEvent& key_event) {
       UpdateChord();
   }
   return kAccepted;
-}
-
-inline static bool is_composing_text(Context* ctx) {
-  return ctx->IsComposing() && ctx->input() != kZeroWidthSpace;
 }
 
 ProcessResult ChordComposer::ProcessKeyEvent(const KeyEvent& key_event) {
